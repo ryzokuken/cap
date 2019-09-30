@@ -2,6 +2,7 @@ use crate::node;
 use crate::options;
 use crate::tokencontext;
 use crate::tokenize;
+use crate::whitespace;
 
 use tokenize::ParserTokenize;
 
@@ -37,8 +38,8 @@ impl Parser {
             let pos = startPos.unwrap();
             parser.pos = pos;
             parser.lineStart = input[pos - 1..].rfind('\n').unwrap();
-            let cline: Vec<&str> = input[..parser.lineStart as usize]
-                .split_whitespace()
+            let cline: Vec<&str> = whitespace::lineBreak
+                .split(&input[..parser.lineStart])
                 .collect();
             parser.curLine = cline.len();
         }
