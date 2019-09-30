@@ -1,5 +1,6 @@
 use crate::state;
 use crate::tokencontext;
+use crate::whitespace;
 use std::char;
 
 struct Token {}
@@ -10,6 +11,7 @@ pub trait ParserTokenize {
     fn curContext(&self) -> Option<&tokencontext::TokContext>;
     fn nextToken(&self) -> ();
     fn skipSpace(&self) -> ();
+    fn skipLineComment(&self, startSkip: usize) -> ();
 }
 
 impl ParserTokenize for state::Parser {
@@ -60,5 +62,28 @@ impl ParserTokenize for state::Parser {
                 }
             }
         }
+    }
+
+    // TODO(ryzokuken): contemplate life and decide if onComment is required.
+    fn skipLineComment(&self, startSkip: usize) {
+        let start = self.pos;
+        // let startLoc = self.options.onComment && self.curPosition();
+        self.pos += startSkip;
+        let chars = self.input.chars();
+        let ch = chars.nth(self.pos);
+        while self.pos < self.input.len() && !whitespace::is_newline(ch.unwrap(), false) {
+            self.pos += 1;
+            ch = chars.nth(self.pos);
+        }
+        // if self.options.onComment.is_some() {
+        //     self.options.onComment(
+        //         false,
+        //         self.input.as_str()[start + startSkip..self.pos],
+        //         start,
+        //         self.pos,
+        //         startLoc,
+        //         self.curPosition(),
+        //     );
+        // }
     }
 }

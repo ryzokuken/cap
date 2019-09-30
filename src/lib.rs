@@ -4,6 +4,7 @@ pub mod options;
 pub mod state;
 pub mod tokencontext;
 pub mod tokenize;
+pub mod whitespace;
 
 pub fn parse(input: String, options: Option<options::Options>) -> node::Node {
     // node::Node {}
