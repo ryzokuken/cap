@@ -65,4 +65,8 @@ impl Parser {
         parser.nextToken();
         parser.parseExpression()
     }
+
+    pub fn tokenizer(input: String, options: Option<option::Options>) -> node::Node {
+        Parser::new(options.unwrap_or_default(), input)
+    }
 }

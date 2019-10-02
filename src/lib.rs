@@ -18,3 +18,7 @@ pub fn parseExpressionAt(
 ) -> node::Node {
     state::Parser::parseExpressionAt(input, pos, options)
 }
+
+pub fn tokenizer(input: String, options: Option<options::Options>) -> node::Node {
+    state::Parser::tokenizer(input, options)
+}
