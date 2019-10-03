@@ -1,22 +1,34 @@
-const SCOPE_TOP: u8 = 1;
-const SCOPE_FUNCTION: u8 = 2;
-const SCOPE_VAR: u8 = SCOPE_TOP | SCOPE_FUNCTION;
-const SCOPE_ASYNC: u8 = 4;
-const SCOPE_GENERATOR: u8 = 8;
-const SCOPE_ARROW: u8 = 16;
-const SCOPE_SIMPLE_CATCH: u8 = 32;
-const SCOPE_SUPER: u8 = 64;
-const SCOPE_DIRECT_SUPER: u8 = 128;
+#[macro_use]
+extern crate bitflags;
 
-pub fn function_flags(async: bool, generator: bool) -> u8 {
-    let is_async = if async { SCOPE_ASYNC } else { 0u8 };
-    let is_generator = if generator { SCOPE_GENERATOR } else { 0u8 };
-    SCOPE_FUNCTION | is_async | is_generator
+bitflags! {
+    pub struct Scopes: u8 {
+        const SCOPE_ZERO = 0b00000000;
+        const SCOPE_TOP = 0b00000001;
+        const SCOPE_FUNCTION = 0b00000010;
+        const SCOPE_VAR = 0b00000011;
+        const SCOPE_ASYNC = 0b00000100;
+        const SCOPE_GENERATOR = 0b000010000;
+        const SCOPE_ARROW = 0b00010000;
+        const SCOPE_SIMPLE_CATCH = 0b00100000;
+        const SCOPE_SUPER = 0b01000000;
+        const SCOPE_DIRECT_SUPER = 0b10000000;
+    }
 }
 
-const BIND_NONE: u8 = 0;
-const BIND_VAR: u8 = 1;
-const BIND_LEXICAL: u8 = 2;
-const BIND_FUNCTION: u8 = 3;
-const BIND_SIMPLE_CATCH: u8 = 4;
-const BIND_OUTSIDE: u8 = 5;
+pub fn function_flags(async: bool, generator: bool) -> Scopes {
+    let is_async = if async { Scopes::SCOPE_ASYNC } else { Scopes::SCOPE_ZERO };
+    let is_generator = if generator { Scopes::SCOPE_GENERATOR } else { Scopes::SCOPE_ZERO };
+    Scopes::SCOPE_FUNCTION | is_async | is_generator
+}
+
+bitflags! {
+    pub struct Binds: u8 {
+        const BIND_NONE = 0b00000000;
+        const BIND_VAR = 0b00000001;
+        const BIND_LEXICAL = 0b00000010;
+        const BIND_FUNCTION = 0b00000011;
+        const BIND_SIMPLE_CATCH = 0b00000100;
+        const BIND_OUTSIDE = 0b00000101;
+    }
+}
