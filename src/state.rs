@@ -6,6 +6,13 @@ use crate::whitespace;
 
 use tokenize::ParserTokenize;
 
+// TODO(ryzokuken): Figure this out.
+// pub trait Tokenizer: std::iter::Iterator<Item = tokenize::Token> {
+//     fn getToken(&self) -> tokenize::Token;
+// }
+
+// impl<T> Tokenizer for T where T: tokenize::ParserTokenize {}
+
 pub struct Parser {
     pub options: options::Options,
     pub input: String,
@@ -65,5 +72,9 @@ impl Parser {
         let parser = Parser::new(options.unwrap_or_default(), input, Some(pos));
         parser.nextToken();
         parser.parseExpression()
+    }
+
+    pub fn tokenizer(input: String, options: Option<options::Options>) -> Parser {
+        Box::from(Parser::new(options.unwrap_or_default(), input, None))
     }
 }

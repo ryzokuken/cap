@@ -47,7 +47,7 @@ pub struct Options {
     allowAwaitOutsideFunction: bool,
     allowHashBang: bool,
     pub locations: bool,
-    ranges: bool,
+    pub ranges: bool,
     pub program: Option<node::Node>,
     pub sourceFile: Option<String>,
     directSourceFile: Option<String>,

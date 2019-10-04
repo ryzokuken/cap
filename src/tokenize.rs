@@ -1,17 +1,54 @@
+use crate::locutil;
 use crate::state;
 use crate::tokencontext;
+use crate::tokentype;
 use crate::whitespace;
 use std::char;
 
-struct Token {}
+pub struct Token {
+    r#type: tokentype::TokenType,
+    value: Box<dyn std::any::Any>,
+    start: usize,
+    end: usize,
+    loc: Option<locutil::SourceLocation>,
+    range: Option<(usize, usize)>,
+}
 
-pub trait ParserTokenize {
-    // fn next() -> ();
-    // fn getToken() -> Token;
+impl Token {
+    fn new(p: &state::Parser) -> Self {
+        let token = Token {
+            r#type: p.r#type,
+            value: p.value,
+            start: p.start,
+            end: p.end,
+            loc: None,
+            range: None,
+        };
+        if p.options.locations {
+            token.loc = Some(locutil::SourceLocation::new(p, p.startLoc, p.endLoc));
+        };
+        if p.options.ranges {
+            token.range = Some((p.start, p.end));
+        }
+        token
+    }
+}
+
+pub trait ParserTokenize: std::iter::Iterator<Item = Token> {
+    fn r#next(&self) -> ();
+    fn getToken(&self) -> Token;
     fn curContext(&self) -> Option<&tokencontext::TokContext>;
     fn nextToken(&self) -> ();
     fn skipSpace(&self) -> ();
     fn skipLineComment(&self, startSkip: usize) -> ();
+}
+
+impl Iterator for state::Parser {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(self.getToken())
+    }
 }
 
 impl ParserTokenize for state::Parser {
@@ -85,5 +122,19 @@ impl ParserTokenize for state::Parser {
         //         self.curPosition(),
         //     );
         // }
+    }
+
+    fn getToken(&self) -> Token {
+        self.r#next();
+        Token::new(self)
+    }
+
+    fn r#next(&self) {
+        // if self.options.onToken.is_some() { self.options.onToken(Token::new(self)) }
+        self.lastTokEnd = self.end;
+        self.lastTokStart = self.start;
+        self.lastTokEndLoc = self.endLoc;
+        self.lastTokStartLoc = self.startLoc;
+        self.nextToken();
     }
 }

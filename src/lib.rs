@@ -4,6 +4,7 @@ pub mod options;
 pub mod state;
 pub mod tokencontext;
 pub mod tokenize;
+pub mod tokentype;
 pub mod whitespace;
 
 pub fn parse(input: String, options: Option<options::Options>) -> node::Node {
@@ -18,4 +19,8 @@ pub fn parseExpressionAt(
     options: Option<options::Options>,
 ) -> node::Node {
     state::Parser::parseExpressionAt(input, pos, options)
+}
+
+pub fn tokenizer(input: String, options: Option<options::Options>) -> state::Parser {
+    state::Parser::tokenizer(input, options)
 }
