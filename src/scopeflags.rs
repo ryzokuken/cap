@@ -16,10 +16,10 @@ bitflags! {
     }
 }
 
-pub fn function_flags(async: bool, generator: bool) -> Scopes {
-    let is_async = if async { Scopes::SCOPE_ASYNC } else { Scopes::SCOPE_ZERO };
-    let is_generator = if generator { Scopes::SCOPE_GENERATOR } else { Scopes::SCOPE_ZERO };
-    Scopes::SCOPE_FUNCTION | is_async | is_generator
+pub fn function_flags(is_async: bool, is_generator: bool) -> Scopes {
+    let async_flag = if is_async { Scopes::SCOPE_ASYNC } else { Scopes::SCOPE_ZERO };
+    let generator_flag = if is_generator { Scopes::SCOPE_GENERATOR } else { Scopes::SCOPE_ZERO };
+    Scopes::SCOPE_FUNCTION | async_flag | generator_flag
 }
 
 bitflags! {
