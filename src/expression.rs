@@ -22,6 +22,7 @@ use crate::state;
 use crate::tokentype;
 
 use node::ParserNode;
+use parseutil::ParserParseUtil;
 
 pub trait ParserExpression {
   // ### Expression parsing
@@ -39,6 +40,14 @@ pub trait ParserExpression {
   // and object pattern might appear (so it's possible to raise
   // delayed syntax error at correct position).
   fn parseExpression(
+    self,
+    noIn: Option<bool>,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+  ) -> node::Node;
+
+  // Parse an assignment expression. This includes applications of
+  // operators like `+=`.
+  fn parseMaybeAssign(
     self,
     noIn: Option<bool>,
     refDestructuringErrors: Option<parseutil::DestructuringErrors>,
