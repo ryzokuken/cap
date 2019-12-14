@@ -45,3 +45,81 @@ impl ParserExpression for state::Parser {
     expr
   }
 }
+
+// half-ass code
+
+// todo type for 'afterLeftParse'
+pub trait ParseMaybeAssign {
+    fn parseMaybeAssign(self, noIn: Option<bool>, refDestructuringErrors: parseutil::DestructuringErrors, afterLeftParse) -> node::Node;
+}
+
+impl ParseMaybeAssign for state::Parser {
+    fn parseMaybeAssign(self, noIn: Option<bool>, refDestructuringErrors: parseutil::DestructuringErrors, afterLeftParse: ) -> node::Node {
+        if self.isContextual("yield") {
+            if self.inGenerator {
+                self.parseYield(noIn)
+            }
+        } else {
+            // todo has to return same type as if
+            // self.exprAllowed = false
+        }
+
+        let ownDestructuringErrors = false;
+        let mut oldParenAssign = -1;
+        let oldTrailingComma = -1;
+        let oldShorthandAssign = -1;
+
+        if refDestructuringErrors {
+            oldParenAssign = refDestructuringErrors.parenthesizedAssign;
+            oldTrailingComma = refDestructuringErrors.trailingComma;
+            oldShorthandAssign = refDestructuringErrors.shorthandAssign
+            refDestructuringErrors.parenthesizedAssign = -1;
+            refDestructuringErrors.trailingComma = -1;
+            refDestructuringErrors.shorthandAssign = -1;
+        } else {
+            // todo don't know what type of struct this is ?
+            refDestructuringErrors = DestructuringErrors(); 
+            ownDestructuringErrors = true;
+        }
+
+        let startPos = self.start;
+        let startLoc = self.startLoc;
+        if self.r#type == tokentype::TokenType::parenL() ||self.r#type == tokentype::TokenType::name() {
+            self.potentialArrowAt = self.start;
+        }
+        let mut left = self.parseMaybeConditional(noIn, refDestructuringErrors);
+        if afterLeftParse {
+            left = afterLeftParse.call(self, left, startPos, startLoc);
+        }
+        // todo condition check 'isAssign' ?
+        if self.r#type.isAssign {
+            let node = self.startNodeAt(startPos, startLoc)
+            node.operator = self.value;
+            node.left = if self.r#type == tokentype::TokenType::eq { self.toAssignable(left, false, refDestructuringErrors) } else { left };
+
+            if !ownDestructuringErrors {
+                //todo don't know what this is
+                DestructuringErrors.call(refDestructuringErrors)
+            }
+            refDestructuringErrors.shorthandAssign = -1
+            self.checkLVal(left);
+            self.next();
+            node.right = self.parseMaybeAssign(noIn);
+            self.finishNode(node, "AssignmentExpression")
+        } else {
+            if ownDestructuringErrors {
+                self.checkExpressionErrors(refDestructuringErrors, true);
+            }
+        }
+        if oldParenAssign > -1 {
+            refDestructuringErrors.parenthesizedAssign = oldParenAssign;
+        }
+        if oldTrailingComma > -1 {
+            refDestructuringErrors.trailingComma = oldTrailingComma;
+        }
+        if oldShorthandAssign > -1 {
+            refDestructuringErrors.shorthandAssign = oldShorthandAssign;
+        }
+        left
+    }
+}
