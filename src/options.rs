@@ -1,7 +1,8 @@
 use crate::locutil;
 use crate::node;
 
-enum EcmaVersion {
+#[derive(PartialEq, PartialOrd)]
+pub enum EcmaVersion {
     Ecma3,
     Ecma5,
     Ecma6,
@@ -22,7 +23,8 @@ impl Default for EcmaVersion {
     }
 }
 
-enum SourceType {
+#[derive(PartialEq)]
+pub enum SourceType {
     Script,
     Module,
 }
@@ -37,8 +39,8 @@ impl Default for SourceType {
 // TODO(ryzokuken): onComment
 #[derive(Default)]
 pub struct Options {
-    ecmaVersion: EcmaVersion,
-    sourceType: SourceType,
+    pub ecmaVersion: EcmaVersion,
+    pub sourceType: SourceType,
     onInsertedSemicolon: Option<fn(u32, Option<locutil::Position>) -> ()>,
     onTrailingComma: Option<fn(u32, Option<locutil::Position>) -> ()>,
     allowReserved: Option<bool>,
