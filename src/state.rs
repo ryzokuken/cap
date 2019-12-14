@@ -1,9 +1,18 @@
+use crate::expression;
+use crate::locutil;
 use crate::node;
 use crate::options;
+use crate::statement;
 use crate::tokencontext;
 use crate::tokenize;
+use crate::tokentype;
 use crate::whitespace;
 
+use std::collections::HashMap;
+
+use expression::ParserExpression;
+use node::ParserNode;
+use statement::ParserStatement;
 use tokenize::ParserTokenize;
 
 // TODO(ryzokuken): Figure this out.
@@ -27,6 +36,18 @@ pub struct Parser {
     pub curLine: usize,
 
     pub context: Vec<tokencontext::TokContext>,
+
+    pub r#type: tokentype::TokenType,
+    pub undefinedExports: HashMap<String, node::Node>,
+    pub inModule: bool,
+    pub lastTokStart: usize,
+    pub lastTokEnd: usize,
+    pub lastTokStartLoc: Option<locutil::Position>,
+    pub lastTokEndLoc: Option<locutil::Position>,
+    pub start: usize,
+    pub end: usize,
+    pub startLoc: Option<locutil::Position>,
+    pub endLoc: Option<locutil::Position>,
 }
 
 // TODO(ryzokuken): do you need sourceFile?
@@ -40,6 +61,17 @@ impl Parser {
             lineStart: 0,
             curLine: 1,
             context: vec![tokencontext::TokContext::b_stat()],
+            r#type: tokentype::TokenType::eof(),
+            undefinedExports: HashMap::new(),
+            inModule: false,
+            lastTokStart: 0,
+            lastTokEnd: 0,
+            lastTokStartLoc: None,
+            lastTokEndLoc: None,
+            start: 0,
+            end: 0,
+            startLoc: None,
+            endLoc: None,
         };
         if startPos.is_some() {
             let pos = startPos.unwrap();
@@ -50,6 +82,11 @@ impl Parser {
                 .collect();
             parser.curLine = cline.len();
         }
+        parser.start = parser.pos;
+        parser.end = parser.pos;
+        parser.lastTokStart = parser.pos;
+        parser.lastTokEnd = parser.pos;
+        parser.inModule = options.sourceType != options::SourceType::Module;
         parser
     }
 
@@ -71,10 +108,10 @@ impl Parser {
     ) -> node::Node {
         let parser = Parser::new(options.unwrap_or_default(), input, Some(pos));
         parser.nextToken();
-        parser.parseExpression()
+        parser.parseExpression(None, None)
     }
 
     pub fn tokenizer(input: String, options: Option<options::Options>) -> Parser {
-        Box::from(Parser::new(options.unwrap_or_default(), input, None))
+        Parser::new(options.unwrap_or_default(), input, None)
     }
 }

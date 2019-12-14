@@ -1,23 +1,23 @@
 use crate::state;
 
 pub struct Position {
-    line: u32,
-    column: u32,
+    line: usize,
+    column: usize,
 }
 
 impl Position {
-    fn new(line: u32, column: u32) -> Self {
+    pub fn new(line: usize, column: usize) -> Self {
         Position { line, column }
     }
 
-    fn offset(&self, n: u32) -> Self {
+    fn offset(&self, n: usize) -> Self {
         Position::new(self.line, self.column + n)
     }
 }
 
 pub struct SourceLocation {
     start: Position,
-    end: Position,
+    pub end: Position,
     source: String,
 }
 
@@ -32,5 +32,9 @@ impl SourceLocation {
             loc.source = p.options.sourceFile.unwrap();
         }
         loc
+    }
+
+    pub fn from_parser(p: state::Parser) -> Self {
+        SourceLocation::new(p, p.startLoc.unwrap(), p.endLoc.unwrap())
     }
 }

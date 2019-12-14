@@ -25,7 +25,7 @@ impl Token {
             range: None,
         };
         if p.options.locations {
-            token.loc = Some(locutil::SourceLocation::new(p, p.startLoc, p.endLoc));
+            token.loc = Some(locutil::SourceLocation::from_parser(p));
         };
         if p.options.ranges {
             token.range = Some((p.start, p.end));
