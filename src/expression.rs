@@ -21,7 +21,23 @@ use crate::parseutil;
 use crate::state;
 use crate::tokentype;
 
+use node::ParserNode;
+
 pub trait ParserExpression {
+  // ### Expression parsing
+
+  // These nest, from the most general expression type at the top to
+  // 'atomic', nondivisible expression types at the bottom. Most of
+  // the functions will simply let the function(s) below them parse,
+  // and, *if* the syntactic construct they handle is present, wrap
+  // the AST node that the inner parser gave them in another node.
+
+  // Parse a full expression. The optional arguments are used to
+  // forbid the `in` operator (in for loops initalization expressions)
+  // and provide reference for storing '=' operator inside shorthand
+  // property assignment in contexts where both object expression
+  // and object pattern might appear (so it's possible to raise
+  // delayed syntax error at correct position).
   fn parseExpression(
     self,
     noIn: Option<bool>,
@@ -37,10 +53,16 @@ impl ParserExpression for state::Parser {
   ) -> node::Node {
     let startPos = self.pos;
     let startLoc = self.startLoc;
-    let expr = self.maybeAssign(noIn, refDestructuringErrors);
+    let expr = self.parseMaybeAssign(noIn, refDestructuringErrors);
     if self.r#type == tokentype::TokenType::comma() {
       let node = self.startNodeAt(startPos, startLoc);
-      // TODO: finish this
+      node.expressions = [expr].to_vec();
+      while self.eat(tokentype::TokenType::comma()) {
+        node
+          .expressions
+          .push(self.parseMaybeAssign(noIn, refDestructuringErrors))
+      }
+      return self.finishNode(node, String::from("SequenceExpression"));
     }
     expr
   }

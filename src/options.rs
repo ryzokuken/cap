@@ -23,7 +23,7 @@ impl Default for EcmaVersion {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum SourceType {
     Script,
     Module,

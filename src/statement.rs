@@ -15,11 +15,11 @@ use node::ParserNode;
 // to its body instead of creating a new node.
 
 pub trait ParserStatement {
-    fn parseTopLevel(&self, node: node::Node) -> node::Node;
+    fn parseTopLevel(self, node: node::Node) -> node::Node;
 }
 
 impl ParserStatement for state::Parser {
-    fn parseTopLevel(&self, node: node::Node) -> node::Node {
+    fn parseTopLevel(self, node: node::Node) -> node::Node {
         let exports: HashMap<String, bool> = HashMap::new();
         if node.body.is_none() {
             node.body = Some(Vec::new());

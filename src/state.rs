@@ -48,6 +48,8 @@ pub struct Parser {
     pub end: usize,
     pub startLoc: Option<locutil::Position>,
     pub endLoc: Option<locutil::Position>,
+
+    pub value: Box<dyn std::any::Any>,
 }
 
 // TODO(ryzokuken): do you need sourceFile?
@@ -72,6 +74,7 @@ impl Parser {
             end: 0,
             startLoc: None,
             endLoc: None,
+            value: Box::new(None),
         };
         if startPos.is_some() {
             let pos = startPos.unwrap();

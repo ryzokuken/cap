@@ -1,5 +1,6 @@
 use crate::state;
 
+#[derive(Clone)]
 pub struct Position {
     line: usize,
     column: usize,
@@ -15,14 +16,15 @@ impl Position {
     }
 }
 
+#[derive(Clone)]
 pub struct SourceLocation {
-    start: Position,
-    pub end: Position,
+    start: Option<Position>,
+    pub end: Option<Position>,
     source: String,
 }
 
 impl SourceLocation {
-    pub fn new(p: state::Parser, start: Position, end: Position) -> Self {
+    pub fn new(p: &state::Parser, start: Option<Position>, end: Option<Position>) -> Self {
         let loc = SourceLocation {
             start,
             end,
@@ -34,7 +36,7 @@ impl SourceLocation {
         loc
     }
 
-    pub fn from_parser(p: state::Parser) -> Self {
-        SourceLocation::new(p, p.startLoc.unwrap(), p.endLoc.unwrap())
+    pub fn from_parser(p: &state::Parser) -> Self {
+        SourceLocation::new(p, p.startLoc, p.endLoc)
     }
 }
