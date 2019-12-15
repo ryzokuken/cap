@@ -29,8 +29,8 @@ pub struct TokenType {
   startsExpr: bool,
   isLoop: bool,
   pub isAssign: bool,
-  prefix: bool,
-  postfix: bool,
+  pub prefix: bool,
+  pub postfix: bool,
   pub binop: Option<usize>,
 }
 
@@ -143,11 +143,25 @@ impl TokenType {
       },
     )
   }
+  pub fn incDec() -> Self {
+    TokenType::new(
+      "++/--",
+      TokenTypeConfig {
+        prefix: true,
+        postfix: true,
+        startsExpr: true,
+        ..Default::default()
+      },
+    )
+  }
   pub fn logicalOR() -> Self {
     binop("||", 1)
   }
   pub fn logicalAND() -> Self {
     binop("&&", 2)
+  }
+  pub fn starstar() -> Self {
+    TokenType::new("**", beforeExpr)
   }
 
   // Keyword token types.

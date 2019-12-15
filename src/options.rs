@@ -46,7 +46,7 @@ pub struct Options {
     allowReserved: Option<bool>,
     allowReturnOutsideFunction: bool,
     allowImportExportEverywhere: bool,
-    allowAwaitOutsideFunction: bool,
+    pub allowAwaitOutsideFunction: bool,
     allowHashBang: bool,
     pub locations: bool,
     pub ranges: bool,

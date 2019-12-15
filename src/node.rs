@@ -30,6 +30,7 @@ pub struct Node {
     pub test: Option<Box<Node>>,
     pub consequent: Option<Box<Node>>,
     pub alternate: Option<Box<Node>>,
+    pub prefix: Option<bool>,
 }
 
 impl Node {
@@ -59,6 +60,7 @@ impl Node {
             test: None,
             consequent: None,
             alternate: None,
+            prefix: None,
         };
         if parser.options.locations {
             node.loc = Some(locutil::SourceLocation::new(&parser, loc, None));

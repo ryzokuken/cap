@@ -16,6 +16,7 @@
 //
 // [opp]: http://en.wikipedia.org/wiki/Operator-precedence_parser
 
+use crate::location;
 use crate::locutil;
 use crate::lval;
 use crate::node;
@@ -23,6 +24,7 @@ use crate::parseutil;
 use crate::state;
 use crate::tokentype;
 
+use location::ParserLocation;
 use lval::ParserLval;
 use node::ParserNode;
 use parseutil::ParserParseUtil;
@@ -83,6 +85,13 @@ pub trait ParserExpression {
     leftStartLoc: locutil::Position,
     minPrec: isize,
     noIn: bool,
+  ) -> node::Node;
+
+  /// Parse unary operators, both prefix and postfix.
+  fn parseMaybeUnary(
+    self,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+    sawUnary: bool,
   ) -> node::Node;
 }
 
@@ -253,5 +262,78 @@ impl ParserExpression for state::Parser {
       return self.parseExprOp(node, leftStartPos, leftStartLoc, minPrec, noIn);
     }
     left
+  }
+
+  fn parseMaybeUnary(
+    self,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+    sawUnary: bool,
+  ) -> node::Node {
+    let startPos = self.start;
+    let startLoc = self.startLoc;
+    let mut expr: node::Node;
+
+    if self.isContextual("await")
+      && (self.inAsync() || (!self.inFunction() && self.options.allowAwaitOutsideFunction))
+    {
+      expr = self.parseAwait();
+      sawUnary = true;
+    } else if self.r#type.prefix {
+      let node = self.startNode();
+      let update = self.r#type == tokentype::TokenType::incDec();
+      node.operator = self.value;
+      node.prefix = Some(true);
+      self.next();
+      node.argument = Some(Box::new(self.parseMaybeUnary(None, true)));
+      self.checkExpressionErrors(refDestructuringErrors, true);
+      if update {
+        self.checkLVal(node.argument);
+      } else if self.strict
+        && node.operator.unwrap() == String::from("delete")
+        && node.argument.unwrap().r#type == "Identifier"
+      {
+        self.raiseRecoverable(
+          node.start,
+          String::from("Deleting local variable in strict mode"),
+        );
+      } else {
+        sawUnary = false;
+      }
+      expr = self.finishNode(
+        node,
+        String::from(if update {
+          "UpdateExpression"
+        } else {
+          "UnaryExpression"
+        }),
+      )
+    } else {
+      expr = self.parseExprSubscripts(refDestructuringErrors);
+      if self.checkExpressionErrors(refDestructuringErrors, false) {
+        return expr;
+      }
+      while self.r#type.postfix && !self.canInsertSemicolon() {
+        let node = self.startNodeAt(startPos, startLoc);
+        node.operator = self.value;
+        node.prefix = Some(false);
+        node.argument = Some(Box::new(expr));
+        self.checkLVal(expr);
+        self.next();
+        expr = self.finishNode(node, String::from("UpdateExpression"));
+      }
+    }
+
+    if !sawUnary && self.eat(tokentype::TokenType::starstar()) {
+      self.buildBinary(
+        startPos,
+        startLoc,
+        expr,
+        self.parseMaybeUnary(None, false),
+        "**",
+        false,
+      )
+    } else {
+      expr
+    }
   }
 }

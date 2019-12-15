@@ -62,6 +62,8 @@ pub struct Parser {
     pub potentialArrowAt: isize,
     /// Scope tracking for duplicate variable names (see scope.rs)
     pub scopeStack: Vec<scope::Scope>,
+
+    pub strict: bool,
 }
 
 // TODO(ryzokuken): do you need sourceFile?
@@ -90,6 +92,7 @@ impl Parser {
             potentialArrowAt: -1,
             exprAllowed: true,
             scopeStack: Vec::new(),
+            strict: false,
         };
         if startPos.is_some() {
             let pos = startPos.unwrap();
@@ -105,6 +108,7 @@ impl Parser {
         parser.lastTokStart = parser.pos;
         parser.lastTokEnd = parser.pos;
         parser.inModule = options.sourceType != options::SourceType::Module;
+        parser.strict = parser.inModule || parser.strictDirective(parser.pos);
         parser
     }
 
