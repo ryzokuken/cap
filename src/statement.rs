@@ -1,3 +1,4 @@
+use crate::location;
 use crate::node;
 use crate::options;
 use crate::state;
@@ -5,6 +6,7 @@ use crate::tokentype;
 
 use std::collections::HashMap;
 
+use location::ParserLocation;
 use node::ParserNode;
 
 // ### Statement parsing

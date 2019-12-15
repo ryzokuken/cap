@@ -16,11 +16,14 @@
 //
 // [opp]: http://en.wikipedia.org/wiki/Operator-precedence_parser
 
+use crate::locutil;
+use crate::lval;
 use crate::node;
 use crate::parseutil;
 use crate::state;
 use crate::tokentype;
 
+use lval::ParserLval;
 use node::ParserNode;
 use parseutil::ParserParseUtil;
 
@@ -33,24 +36,25 @@ pub trait ParserExpression {
   // and, *if* the syntactic construct they handle is present, wrap
   // the AST node that the inner parser gave them in another node.
 
-  // Parse a full expression. The optional arguments are used to
-  // forbid the `in` operator (in for loops initalization expressions)
-  // and provide reference for storing '=' operator inside shorthand
-  // property assignment in contexts where both object expression
-  // and object pattern might appear (so it's possible to raise
-  // delayed syntax error at correct position).
+  /// Parse a full expression. The optional arguments are used to
+  /// forbid the `in` operator (in for loops initalization expressions)
+  /// and provide reference for storing '=' operator inside shorthand
+  /// property assignment in contexts where both object expression
+  /// and object pattern might appear (so it's possible to raise
+  /// delayed syntax error at correct position).
   fn parseExpression(
     self,
     noIn: Option<bool>,
     refDestructuringErrors: Option<parseutil::DestructuringErrors>,
   ) -> node::Node;
 
-  // Parse an assignment expression. This includes applications of
-  // operators like `+=`.
+  /// Parse an assignment expression. This includes applications of
+  /// operators like `+=`.
   fn parseMaybeAssign(
     self,
     noIn: Option<bool>,
     refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+    afterLeftParse: Option<fn(state::Parser, node::Node, usize, locutil::Position)>,
   ) -> node::Node;
 }
 
@@ -62,17 +66,94 @@ impl ParserExpression for state::Parser {
   ) -> node::Node {
     let startPos = self.pos;
     let startLoc = self.startLoc;
-    let expr = self.parseMaybeAssign(noIn, refDestructuringErrors);
+    let expr = self.parseMaybeAssign(noIn, refDestructuringErrors, None);
     if self.r#type == tokentype::TokenType::comma() {
       let node = self.startNodeAt(startPos, startLoc);
       node.expressions = [expr].to_vec();
       while self.eat(tokentype::TokenType::comma()) {
         node
           .expressions
-          .push(self.parseMaybeAssign(noIn, refDestructuringErrors))
+          .push(self.parseMaybeAssign(noIn, refDestructuringErrors, None))
       }
       return self.finishNode(node, String::from("SequenceExpression"));
     }
     expr
+  }
+
+  fn parseMaybeAssign(
+    self,
+    noIn: Option<bool>,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+    afterLeftParse: Option<fn(state::Parser, node::Node, usize, locutil::Position)>,
+  ) -> node::Node {
+    if self.isContextual("yield") {
+      if self.inGenerator() {
+        return self.parseYield(noIn);
+      } else {
+        // The tokenizer will assume an expression is allowed after
+        // `yield`, but this isn't that kind of yield
+        self.exprAllowed = false;
+      }
+    }
+
+    let mut ownDestructuringErrors = false;
+    let mut oldParenAssign = -1;
+    let mut oldTrailingComma = -1;
+    let mut oldShorthandAssign = -1;
+    if refDestructuringErrors.is_some() {
+      oldParenAssign = refDestructuringErrors.unwrap().parenthesizedAssign;
+      oldTrailingComma = refDestructuringErrors.unwrap().trailingComma;
+      oldShorthandAssign = refDestructuringErrors.unwrap().shorthandAssign;
+      refDestructuringErrors.unwrap().parenthesizedAssign = -1;
+      refDestructuringErrors.unwrap().trailingComma = -1;
+      refDestructuringErrors.unwrap().shorthandAssign = -1;
+    } else {
+      refDestructuringErrors = Some(parseutil::DestructuringErrors::new());
+      ownDestructuringErrors = true;
+    }
+
+    let startPos = self.start;
+    let startLoc = self.startLoc;
+    if self.r#type == tokentype::TokenType::parenL() || self.r#type == tokentype::TokenType::name()
+    {
+      self.potentialArrowAt = self.start as isize;
+    }
+    let mut left = self.parseMaybeConditional(noIn, refDestructuringErrors);
+    if afterLeftParse.is_some() {
+      afterLeftParse.unwrap()(self, left, startPos, startLoc.unwrap());
+    }
+    if self.r#type.isAssign {
+      let node = self.startNodeAt(startPos, startLoc);
+      node.operator = self.value;
+      node.left = if self.r#type == tokentype::TokenType::eq() {
+        Some(Box::new(self.toAssignable(
+          Some(left),
+          false,
+          refDestructuringErrors,
+        )))
+      } else {
+        Some(Box::new(left))
+      };
+      if !ownDestructuringErrors {
+        refDestructuringErrors.unwrap().reset();
+      }
+      refDestructuringErrors.unwrap().shorthandAssign = -1;
+      self.checkLVal(left);
+      self.next();
+      node.right = Some(Box::new(self.parseMaybeAssign(noIn, None, None)));
+      return self.finishNode(node, String::from("AssignmentExpression"));
+    } else if ownDestructuringErrors {
+      self.checkExpressionErrors(refDestructuringErrors, true);
+    }
+    if oldParenAssign > -1 {
+      refDestructuringErrors.unwrap().parenthesizedAssign = oldParenAssign;
+    }
+    if oldTrailingComma > -1 {
+      refDestructuringErrors.unwrap().trailingComma = oldTrailingComma;
+    }
+    if oldShorthandAssign > -1 {
+      refDestructuringErrors.unwrap().shorthandAssign = oldShorthandAssign;
+    }
+    left
   }
 }

@@ -28,7 +28,7 @@ pub struct TokenType {
   beforeExpr: bool,
   startsExpr: bool,
   isLoop: bool,
-  isAssign: bool,
+  pub isAssign: bool,
   prefix: bool,
   postfix: bool,
   binop: Option<usize>,
@@ -46,10 +46,19 @@ struct TokenTypeConfig {
   binop: Option<usize>,
 }
 
+static beforeExpr: TokenTypeConfig = TokenTypeConfig {
+  beforeExpr: true,
+  ..Default::default()
+};
+static startsExpr: TokenTypeConfig = TokenTypeConfig {
+  startsExpr: true,
+  ..Default::default()
+};
+
 impl TokenType {
-  fn new(label: String, conf: TokenTypeConfig) -> Self {
+  fn new(label: &str, conf: TokenTypeConfig) -> Self {
     TokenType {
-      label,
+      label: String::from(label),
       keyword: conf.keyword,
       beforeExpr: conf.beforeExpr,
       startsExpr: conf.startsExpr,
@@ -61,16 +70,47 @@ impl TokenType {
     }
   }
 
+  pub fn name() -> Self {
+    TokenType::new("name", startsExpr)
+  }
   pub fn eof() -> Self {
-    TokenType::new(String::from("eof"), Default::default())
+    TokenType::new("eof", Default::default())
   }
 
   // Punctuation token types.
-  pub fn comma() -> Self {
+  pub fn parenL() -> Self {
     TokenType::new(
-      String::from(","),
+      "(",
       TokenTypeConfig {
         beforeExpr: true,
+        startsExpr: true,
+        ..Default::default()
+      },
+    )
+  }
+  pub fn comma() -> Self {
+    TokenType::new(",", beforeExpr)
+  }
+
+  // Operators. These carry several kinds of properties to help the
+  // parser use them properly (the presence of these properties is
+  // what categorizes them as operators).
+  //
+  // `binop`, when present, specifies that this operator is a binary
+  // operator, and will refer to its precedence.
+  //
+  // `prefix` and `postfix` mark the operator as a prefix or postfix
+  // unary operator.
+  //
+  // `isAssign` marks all of `=`, `+=`, `-=` etcetera, which act as
+  // binary operators with a very low precedence, that should result
+  // in AssignmentExpression nodes.
+  pub fn eq() -> Self {
+    TokenType::new(
+      "=",
+      TokenTypeConfig {
+        beforeExpr: true,
+        isAssign: true,
         ..Default::default()
       },
     )

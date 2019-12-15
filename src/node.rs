@@ -4,9 +4,9 @@ use crate::state;
 
 #[derive(Clone)]
 pub struct Node {
-    r#type: String,
+    pub r#type: String,
     pub start: usize,
-    end: usize,
+    pub end: usize,
     loc: Option<locutil::SourceLocation>,
     sourceFile: Option<String>,
     range: Option<(usize, usize)>,
@@ -14,6 +14,18 @@ pub struct Node {
     pub local: Option<Box<Node>>,
     pub sourceType: Option<options::SourceType>,
     pub expressions: Vec<Node>,
+
+    pub left: Option<Box<Node>>,
+    pub right: Option<Box<Node>>,
+    pub operator: Option<String>,
+    pub name: Option<String>,
+    pub properties: Option<Vec<Node>>,
+    pub argument: Option<Box<Node>>,
+    pub kind: Option<String>,
+    pub value: Option<Box<Node>>,
+    pub key: Option<Box<Node>>,
+    pub elements: Option<Vec<Node>>,
+    pub expression: Option<Box<Node>>,
 }
 
 impl Node {
@@ -29,6 +41,15 @@ impl Node {
             local: None,
             sourceType: None,
             expressions: Vec::new(),
+            left: None,
+            right: None,
+            operator: None,
+            name: None,
+            properties: None,
+            argument: None,
+            kind: None,
+            value: None,
+            elements: None,
         };
         if parser.options.locations {
             node.loc = Some(locutil::SourceLocation::new(&parser, loc, None));
