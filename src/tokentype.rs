@@ -119,6 +119,9 @@ impl TokenType {
   pub fn question() -> Self {
     TokenType::new("?", beforeExpr)
   }
+  pub fn semi() -> Self {
+    TokenType::new(";", beforeExpr)
+  }
 
   // Operators. These carry several kinds of properties to help the
   // parser use them properly (the presence of these properties is
@@ -162,6 +165,9 @@ impl TokenType {
   }
   pub fn starstar() -> Self {
     TokenType::new("**", beforeExpr)
+  }
+  pub fn star() -> Self {
+      binop("*", 10)
   }
 
   // Keyword token types.
