@@ -63,6 +63,27 @@ pub trait ParserExpression {
     noIn: Option<bool>,
     refDestructuringErrors: Option<parseutil::DestructuringErrors>,
   ) -> node::Node;
+
+  /// Start the precedence parser.
+  fn parseExprOps(
+    self,
+    noIn: Option<bool>,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+  ) -> node::Node;
+
+  /// Parse binary operators with the operator precedence parsing
+  /// algorithm. `left` is the left-hand side of the operator.
+  /// `minPrec` provides context that allows the function to stop and
+  /// defer further parser to one of its callers when it encounters an
+  /// operator that has a lower precedence than the set it is parsing.
+  fn parseExprOp(
+    self,
+    left: node::Node,
+    leftStartPos: usize,
+    leftStartLoc: locutil::Position,
+    minPrec: isize,
+    noIn: bool,
+  ) -> node::Node;
 }
 
 impl ParserExpression for state::Parser {
@@ -184,5 +205,53 @@ impl ParserExpression for state::Parser {
       return self.finishNode(node, String::from("ConditionalExpression"));
     }
     expr
+  }
+
+  fn parseExprOps(
+    self,
+    noIn: Option<bool>,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+  ) -> node::Node {
+    let startPos = self.start;
+    let startLoc = self.startLoc;
+    let expr = self.parseMaybeUnary(refDestructuringErrors, false);
+    if self.checkExpressionErrors(refDestructuringErrors, false) {
+      return expr;
+    }
+    if expr.start == startPos && expr.r#type == "ArrowFunctionExpression" {
+      expr
+    } else {
+      self.parseExprOp(expr, startPos, startLoc.unwrap(), -1, noIn.unwrap())
+    }
+  }
+
+  fn parseExprOp(
+    self,
+    left: node::Node,
+    leftStartPos: usize,
+    leftStartLoc: locutil::Position,
+    minPrec: isize,
+    noIn: bool,
+  ) -> node::Node {
+    let prec = self.r#type.binop;
+    if prec.is_some()
+      && (!noIn || self.r#type != tokentype::TokenType::_in())
+      && prec.unwrap() as isize > minPrec
+    {
+      let logical = self.r#type == tokentype::TokenType::logicalOR()
+        || self.r#type == tokentype::TokenType::logicalAND();
+      let op = self.value;
+      self.next();
+      let right = self.parseExprOp(
+        self.parseMaybeUnary(None, false),
+        self.start,
+        self.startLoc.unwrap(),
+        prec.unwrap() as isize,
+        noIn,
+      );
+      let node = self.buildBinary(leftStartPos, leftStartLoc, left, right, op, logical);
+      return self.parseExprOp(node, leftStartPos, leftStartLoc, minPrec, noIn);
+    }
+    left
   }
 }

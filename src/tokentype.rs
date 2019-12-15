@@ -31,7 +31,7 @@ pub struct TokenType {
   pub isAssign: bool,
   prefix: bool,
   postfix: bool,
-  binop: Option<usize>,
+  pub binop: Option<usize>,
 }
 
 #[derive(Default)]
@@ -46,6 +46,17 @@ struct TokenTypeConfig {
   binop: Option<usize>,
 }
 
+fn binop(name: &str, prec: usize) -> TokenType {
+  TokenType::new(
+    name,
+    TokenTypeConfig {
+      beforeExpr: true,
+      binop: Some(prec),
+      ..Default::default()
+    },
+  )
+}
+
 static beforeExpr: TokenTypeConfig = TokenTypeConfig {
   beforeExpr: true,
   ..Default::default()
@@ -54,6 +65,17 @@ static startsExpr: TokenTypeConfig = TokenTypeConfig {
   startsExpr: true,
   ..Default::default()
 };
+
+/// Map keyword names to token types.
+static keywords: std::collections::HashMap<&str, TokenType> = std::collections::HashMap::new();
+
+/// Succinct definitions of keyword token types
+fn kw(name: &str, options: TokenTypeConfig) -> TokenType {
+  options.keyword = String::from(name);
+  let token = TokenType::new(name, options);
+  keywords[name] = token;
+  token
+}
 
 impl TokenType {
   fn new(label: &str, conf: TokenTypeConfig) -> Self {
@@ -117,6 +139,24 @@ impl TokenType {
       TokenTypeConfig {
         beforeExpr: true,
         isAssign: true,
+        ..Default::default()
+      },
+    )
+  }
+  pub fn logicalOR() -> Self {
+    binop("||", 1)
+  }
+  pub fn logicalAND() -> Self {
+    binop("&&", 2)
+  }
+
+  // Keyword token types.
+  pub fn _in() -> Self {
+    kw(
+      "in",
+      TokenTypeConfig {
+        beforeExpr: true,
+        binop: Some(7),
         ..Default::default()
       },
     )
