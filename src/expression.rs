@@ -93,6 +93,13 @@ pub trait ParserExpression {
     refDestructuringErrors: Option<parseutil::DestructuringErrors>,
     sawUnary: bool,
   ) -> node::Node;
+
+  fn parseYield(
+    self,
+    noIn: Option<bool>
+  ) -> node::Node;
+
+  fn parseAwait(self) -> node::Node;
 }
 
 impl ParserExpression for state::Parser {
@@ -335,5 +342,36 @@ impl ParserExpression for state::Parser {
     } else {
       expr
     }
+  }
+
+  fn parseYield (
+    self,
+    noIn: Option<bool>
+  ) -> node::Node {
+    if !self.yieldPos {
+        self.yieldPos = self.start;
+    }
+
+    let node = self.startNode();
+    self.next();
+    if self.r#type == tokentype::TokenType::semi() || self.canInsertSemiColon() || (self.r#type != tokentype::TokenType::star() && !self.r#type.startsExpr) {
+      node.delegate = false;
+      node.argument = None;
+    } else {
+      node.delegate = self.eat(tokentype::TokenType::star());
+      node.argument = Some(Box::new(self.parseMaybeAssign(noIn, None, None)));
+    }
+    self.finishNode(node, String::from("YieldExpression"))
+  }
+
+  fn parseAwait (self) -> node::Node {
+      if !self.awaitPos {
+          self.awaitPos = self.start;
+      }
+
+      let node = self.startNode();
+      self.next();
+      node.argument = Some(Box::new(self.parseMaybeUnary(None, true)));
+      self.finishNode(node, String::from("AwaitExpression"))
   }
 }
