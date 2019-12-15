@@ -3,11 +3,12 @@ use crate::state;
 use crate::tokencontext;
 use crate::tokentype;
 use crate::whitespace;
+
 use std::char;
 
 pub struct Token {
     r#type: tokentype::TokenType,
-    value: Box<dyn std::any::Any>,
+    value: Option<String>,
     start: usize,
     end: usize,
     loc: Option<locutil::SourceLocation>,

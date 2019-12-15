@@ -1,8 +1,10 @@
 use crate::state;
+use crate::whitespace;
 
+#[derive(Clone)]
 pub struct Position {
-    line: usize,
-    column: usize,
+    pub line: usize,
+    pub column: usize,
 }
 
 impl Position {
@@ -15,14 +17,15 @@ impl Position {
     }
 }
 
+#[derive(Clone)]
 pub struct SourceLocation {
-    start: Position,
-    pub end: Position,
+    start: Option<Position>,
+    pub end: Option<Position>,
     source: String,
 }
 
 impl SourceLocation {
-    pub fn new(p: state::Parser, start: Position, end: Position) -> Self {
+    pub fn new(p: &state::Parser, start: Option<Position>, end: Option<Position>) -> Self {
         let loc = SourceLocation {
             start,
             end,
@@ -34,7 +37,26 @@ impl SourceLocation {
         loc
     }
 
-    pub fn from_parser(p: state::Parser) -> Self {
-        SourceLocation::new(p, p.startLoc.unwrap(), p.endLoc.unwrap())
+    pub fn from_parser(p: &state::Parser) -> Self {
+        SourceLocation::new(p, p.startLoc, p.endLoc)
+    }
+}
+
+/// The `getLineInfo` function is mostly useful when the
+/// `locations` option is off (for performance reasons) and you
+/// want to find the line/column position for a given character
+/// offset. `input` should be the code string that the offset refers
+/// into.
+pub fn getLineInfo(input: String, offset: usize) -> Position {
+    let line = 1;
+    let cur = 0;
+    loop {
+        let mat = whitespace::lineBreak.find_at(input.as_str(), cur);
+        if mat.is_some() && mat.unwrap().start() < offset {
+            line += 1;
+            cur = mat.unwrap().end();
+        } else {
+            return Position::new(line, offset - cur);
+        }
     }
 }

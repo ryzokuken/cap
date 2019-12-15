@@ -2,6 +2,8 @@ use crate::expression;
 use crate::locutil;
 use crate::node;
 use crate::options;
+use crate::scope;
+use crate::scopeflags;
 use crate::statement;
 use crate::tokencontext;
 use crate::tokenize;
@@ -12,6 +14,8 @@ use std::collections::HashMap;
 
 use expression::ParserExpression;
 use node::ParserNode;
+use scope::ParserScope;
+use scopeflags::Flags;
 use statement::ParserStatement;
 use tokenize::ParserTokenize;
 
@@ -26,16 +30,20 @@ pub struct Parser {
     pub options: options::Options,
     pub input: String,
 
-    // Used to signal to callers of `readWord1` whether the word
-    // contained any escape sequences. This is needed because words with
-    // escape sequences must not be interpreted as keywords.
-    containsEsc: bool,
+    /// Used to signal to callers of `readWord1` whether the word
+    /// contained any escape sequences. This is needed because words with
+    /// escape sequences must not be interpreted as keywords.
+    pub containsEsc: bool,
 
     pub pos: usize,
     pub lineStart: usize,
     pub curLine: usize,
 
+    /// The context stack is used to superficially track syntactic
+    /// context to predict whether a regular expression is allowed in a
+    /// given position.
     pub context: Vec<tokencontext::TokContext>,
+    pub exprAllowed: bool,
 
     pub r#type: tokentype::TokenType,
     pub undefinedExports: HashMap<String, node::Node>,
@@ -48,6 +56,14 @@ pub struct Parser {
     pub end: usize,
     pub startLoc: Option<locutil::Position>,
     pub endLoc: Option<locutil::Position>,
+
+    pub value: Option<String>,
+    /// Used to signify the start of a potential arrow function
+    pub potentialArrowAt: isize,
+    /// Scope tracking for duplicate variable names (see scope.rs)
+    pub scopeStack: Vec<scope::Scope>,
+
+    pub strict: bool,
 }
 
 // TODO(ryzokuken): do you need sourceFile?
@@ -72,6 +88,11 @@ impl Parser {
             end: 0,
             startLoc: None,
             endLoc: None,
+            value: None,
+            potentialArrowAt: -1,
+            exprAllowed: true,
+            scopeStack: Vec::new(),
+            strict: false,
         };
         if startPos.is_some() {
             let pos = startPos.unwrap();
@@ -87,6 +108,7 @@ impl Parser {
         parser.lastTokStart = parser.pos;
         parser.lastTokEnd = parser.pos;
         parser.inModule = options.sourceType != options::SourceType::Module;
+        parser.strict = parser.inModule || parser.strictDirective(parser.pos);
         parser
     }
 
@@ -113,5 +135,13 @@ impl Parser {
 
     pub fn tokenizer(input: String, options: Option<options::Options>) -> Parser {
         Parser::new(options.unwrap_or_default(), input, None)
+    }
+
+    pub fn inGenerator(self) -> bool {
+        (self.currentVarScope().unwrap().flags & Flags::Generator) > Flags::Zero
+    }
+
+    pub fn inAsync(self) -> bool {
+        (self.currentVarScope().unwrap().flags & Flags::Async) > Flags::Zero
     }
 }

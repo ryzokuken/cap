@@ -23,7 +23,7 @@ impl Default for EcmaVersion {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum SourceType {
     Script,
     Module,
@@ -46,7 +46,7 @@ pub struct Options {
     allowReserved: Option<bool>,
     allowReturnOutsideFunction: bool,
     allowImportExportEverywhere: bool,
-    allowAwaitOutsideFunction: bool,
+    pub allowAwaitOutsideFunction: bool,
     allowHashBang: bool,
     pub locations: bool,
     pub ranges: bool,

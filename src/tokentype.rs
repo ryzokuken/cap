@@ -28,10 +28,10 @@ pub struct TokenType {
   beforeExpr: bool,
   startsExpr: bool,
   isLoop: bool,
-  isAssign: bool,
-  prefix: bool,
-  postfix: bool,
-  binop: Option<usize>,
+  pub isAssign: bool,
+  pub prefix: bool,
+  pub postfix: bool,
+  pub binop: Option<usize>,
 }
 
 #[derive(Default)]
@@ -46,10 +46,41 @@ struct TokenTypeConfig {
   binop: Option<usize>,
 }
 
+fn binop(name: &str, prec: usize) -> TokenType {
+  TokenType::new(
+    name,
+    TokenTypeConfig {
+      beforeExpr: true,
+      binop: Some(prec),
+      ..Default::default()
+    },
+  )
+}
+
+static beforeExpr: TokenTypeConfig = TokenTypeConfig {
+  beforeExpr: true,
+  ..Default::default()
+};
+static startsExpr: TokenTypeConfig = TokenTypeConfig {
+  startsExpr: true,
+  ..Default::default()
+};
+
+/// Map keyword names to token types.
+static keywords: std::collections::HashMap<&str, TokenType> = std::collections::HashMap::new();
+
+/// Succinct definitions of keyword token types
+fn kw(name: &str, options: TokenTypeConfig) -> TokenType {
+  options.keyword = String::from(name);
+  let token = TokenType::new(name, options);
+  keywords[name] = token;
+  token
+}
+
 impl TokenType {
-  fn new(label: String, conf: TokenTypeConfig) -> Self {
+  fn new(label: &str, conf: TokenTypeConfig) -> Self {
     TokenType {
-      label,
+      label: String::from(label),
       keyword: conf.keyword,
       beforeExpr: conf.beforeExpr,
       startsExpr: conf.startsExpr,
@@ -61,16 +92,85 @@ impl TokenType {
     }
   }
 
+  pub fn name() -> Self {
+    TokenType::new("name", startsExpr)
+  }
   pub fn eof() -> Self {
-    TokenType::new(String::from("eof"), Default::default())
+    TokenType::new("eof", Default::default())
   }
 
   // Punctuation token types.
-  pub fn comma() -> Self {
+  pub fn parenL() -> Self {
     TokenType::new(
-      String::from(","),
+      "(",
       TokenTypeConfig {
         beforeExpr: true,
+        startsExpr: true,
+        ..Default::default()
+      },
+    )
+  }
+  pub fn comma() -> Self {
+    TokenType::new(",", beforeExpr)
+  }
+  pub fn colon() -> Self {
+    TokenType::new(":", beforeExpr)
+  }
+  pub fn question() -> Self {
+    TokenType::new("?", beforeExpr)
+  }
+
+  // Operators. These carry several kinds of properties to help the
+  // parser use them properly (the presence of these properties is
+  // what categorizes them as operators).
+  //
+  // `binop`, when present, specifies that this operator is a binary
+  // operator, and will refer to its precedence.
+  //
+  // `prefix` and `postfix` mark the operator as a prefix or postfix
+  // unary operator.
+  //
+  // `isAssign` marks all of `=`, `+=`, `-=` etcetera, which act as
+  // binary operators with a very low precedence, that should result
+  // in AssignmentExpression nodes.
+  pub fn eq() -> Self {
+    TokenType::new(
+      "=",
+      TokenTypeConfig {
+        beforeExpr: true,
+        isAssign: true,
+        ..Default::default()
+      },
+    )
+  }
+  pub fn incDec() -> Self {
+    TokenType::new(
+      "++/--",
+      TokenTypeConfig {
+        prefix: true,
+        postfix: true,
+        startsExpr: true,
+        ..Default::default()
+      },
+    )
+  }
+  pub fn logicalOR() -> Self {
+    binop("||", 1)
+  }
+  pub fn logicalAND() -> Self {
+    binop("&&", 2)
+  }
+  pub fn starstar() -> Self {
+    TokenType::new("**", beforeExpr)
+  }
+
+  // Keyword token types.
+  pub fn _in() -> Self {
+    kw(
+      "in",
+      TokenTypeConfig {
+        beforeExpr: true,
+        binop: Some(7),
         ..Default::default()
       },
     )

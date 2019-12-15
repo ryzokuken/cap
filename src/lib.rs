@@ -1,9 +1,15 @@
+#[macro_use]
+extern crate bitflags;
+
 pub mod expression;
 pub mod location;
 pub mod locutil;
+pub mod lval;
 pub mod node;
 pub mod options;
 pub mod parseutil;
+pub mod scope;
+pub mod scopeflags;
 pub mod state;
 pub mod statement;
 pub mod tokencontext;
