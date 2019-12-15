@@ -56,6 +56,13 @@ pub trait ParserExpression {
     refDestructuringErrors: Option<parseutil::DestructuringErrors>,
     afterLeftParse: Option<fn(state::Parser, node::Node, usize, locutil::Position)>,
   ) -> node::Node;
+
+  /// Parse a ternary conditional (`?:`) operator.
+  fn parseMaybeConditional(
+    self,
+    noIn: Option<bool>,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+  ) -> node::Node;
 }
 
 impl ParserExpression for state::Parser {
@@ -126,11 +133,11 @@ impl ParserExpression for state::Parser {
       let node = self.startNodeAt(startPos, startLoc);
       node.operator = self.value;
       node.left = if self.r#type == tokentype::TokenType::eq() {
-        Some(Box::new(self.toAssignable(
-          Some(left),
-          false,
-          refDestructuringErrors,
-        )))
+        Some(Box::new(
+          self
+            .toAssignable(Some(left), false, refDestructuringErrors)
+            .unwrap(),
+        ))
       } else {
         Some(Box::new(left))
       };
@@ -155,5 +162,27 @@ impl ParserExpression for state::Parser {
       refDestructuringErrors.unwrap().shorthandAssign = oldShorthandAssign;
     }
     left
+  }
+
+  fn parseMaybeConditional(
+    self,
+    noIn: Option<bool>,
+    refDestructuringErrors: Option<parseutil::DestructuringErrors>,
+  ) -> node::Node {
+    let startPos = self.start;
+    let startLoc = self.startLoc;
+    let expr = self.parseExprOps(noIn, refDestructuringErrors);
+    if self.checkExpressionErrors(refDestructuringErrors, false) {
+      return expr;
+    }
+    if self.eat(tokentype::TokenType::question()) {
+      let node = self.startNodeAt(startPos, startLoc);
+      node.test = Some(Box::new(expr));
+      node.consequent = Some(Box::new(self.parseMaybeAssign(None, None, None)));
+      self.expect(tokentype::TokenType::colon());
+      node.alternate = Some(Box::new(self.parseMaybeAssign(noIn, None, None)));
+      return self.finishNode(node, String::from("ConditionalExpression"));
+    }
+    expr
   }
 }

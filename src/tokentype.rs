@@ -91,6 +91,12 @@ impl TokenType {
   pub fn comma() -> Self {
     TokenType::new(",", beforeExpr)
   }
+  pub fn colon() -> Self {
+    TokenType::new(":", beforeExpr)
+  }
+  pub fn question() -> Self {
+    TokenType::new("?", beforeExpr)
+  }
 
   // Operators. These carry several kinds of properties to help the
   // parser use them properly (the presence of these properties is

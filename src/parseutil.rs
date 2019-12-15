@@ -12,6 +12,13 @@ pub trait ParserParseUtil {
   /// type, and if yes, consumes it as a side effect.
   fn eat(self, r#type: tokentype::TokenType) -> bool;
 
+  /// Expect a token of a given type. If found, consume it, otherwise,
+  /// raise an unexpected token error.
+  fn expect(self, r#type: tokentype::TokenType) -> Result<(), location::SyntaxError>;
+
+  /// Raise an unexpected token error.
+  fn unexpected(self, pos: Option<usize>) -> Result<(), location::SyntaxError>;
+
   fn checkPatternErrors(self, refDetructuringErrors: Option<DestructuringErrors>, isAssign: bool);
 
   fn checkExpressionErrors(
@@ -28,13 +35,25 @@ impl ParserParseUtil for state::Parser {
       && !self.containsEsc
   }
 
-  fn eat(self, r#type: tokentype::TokenType) -> bool {
-    if self.r#type == r#type {
+  fn eat(self, tt: tokentype::TokenType) -> bool {
+    if self.r#type == tt {
       self.next();
       true
     } else {
       false
     }
+  }
+
+  fn expect(self, tt: tokentype::TokenType) -> Result<(), location::SyntaxError> {
+    if self.eat(tt) {
+      Ok(())
+    } else {
+      self.unexpected(None)
+    }
+  }
+
+  fn unexpected(self, pos: Option<usize>) -> Result<(), location::SyntaxError> {
+    self.raise(pos.unwrap_or(self.start), String::from("Unexpected token"))
   }
 
   fn checkExpressionErrors(

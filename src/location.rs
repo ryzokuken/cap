@@ -1,7 +1,7 @@
 use crate::locutil;
 use crate::state;
 
-struct SyntaxError {
+pub struct SyntaxError {
   pos: usize,
   loc: locutil::Position,
   raisedAt: usize,

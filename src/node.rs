@@ -26,6 +26,10 @@ pub struct Node {
     pub key: Option<Box<Node>>,
     pub elements: Option<Vec<Node>>,
     pub expression: Option<Box<Node>>,
+
+    pub test: Option<Box<Node>>,
+    pub consequent: Option<Box<Node>>,
+    pub alternate: Option<Box<Node>>,
 }
 
 impl Node {
@@ -49,7 +53,12 @@ impl Node {
             argument: None,
             kind: None,
             value: None,
+            key: None,
             elements: None,
+            expression: None,
+            test: None,
+            consequent: None,
+            alternate: None,
         };
         if parser.options.locations {
             node.loc = Some(locutil::SourceLocation::new(&parser, loc, None));
